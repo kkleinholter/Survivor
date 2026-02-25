@@ -1,0 +1,70 @@
+  <!-- Modal for large player image -->
+  <div id="imageModal" class="image-modal" style="display:none;">
+    <div class="image-modal-backdrop"></div>
+    <div class="image-modal-content">
+      <img id="modalImage" src="" alt="Player large" />
+      <button id="closeModalBtn" class="close-modal-btn" aria-label="Close">&times;</button>
+    </div>
+  </div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lega Family Survivor Pool</title>
+    <link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="shortcut icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="Survivor" />
+    <link rel="manifest" href="/site.webmanifest" />
+    
+    <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="page-header">
+    <img class="show-logo" src="assets/images/Survivor_50_logo.png" alt="Survivor 50 logo" />
+    <h1>Lega Family Survivor Pool</h1>
+  </header>
+
+  <main>
+            <section class="countdown-section" aria-label="Countdown to Survivor 50 Premiere">
+              <div id="countdownTorch" class="countdown-torch" aria-hidden="true">🔥</div>
+              <div id="countdownClock" class="countdown-clock"></div>
+            </section>
+    <button id="editModeBtn" class="edit-mode-btn" type="button" style="position:absolute;left:-9999px;top:0;">Edit Mode: Off</button>
+    <section class="section-block" aria-label="Remaining Picks">
+      <table class="standings-table">
+        <thead>
+          <tr>
+            <th scope="col">Player</th>
+            <th scope="col">Remaining</th>
+            <!-- <th scope="col">Odds</th> -->
+          </tr>
+        </thead>
+        <tbody id="standingsBody"></tbody>
+      </table>
+    </section>
+
+    <section class="section-block" aria-label="Picks by Person">
+      <section id="picksGrid" class="picks-grid" aria-live="polite"></section>
+    </section>
+  </main>
+
+  <template id="playerCardTemplate">
+    <button class="player-card" type="button" aria-pressed="false">
+      <div class="player-row">
+        <img class="player-thumb" src="" alt="" loading="lazy" />
+        <span class="player-meta">
+          <span class="player-name"></span>
+          <!-- <span class="player-odds"></span> -->
+          <!-- chance display removed, will append to name in script.js -->
+          <input class="player-chance-input" type="number" min="0" max="100" step="1" placeholder="%" style="display:none;width:48px;margin-left:6px;" aria-label="Win chance percent" />
+        </span>
+      </div>
+    </button>
+  </template>
+
+  <script src="script.js"></script>
+</body>
+</html>
