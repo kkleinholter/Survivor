@@ -27,133 +27,169 @@ function startCountdown() {
   setInterval(updateCountdown, 1000);
 }
 document.addEventListener('DOMContentLoaded', startCountdown);
-// --- Win Chance Logic (Hard-coded, not editable) ---
-const winChances = {
-  "angelina keeley": 1,
-  "aubry bracco": 76,
-  "benjamin \"coach\" wade": 2,
-  "charlie davis": 1,
-  "chrissy hofbeck": 2,
-  "christian hubicki": 2,
-  "cirie fields": 6,
-  "colby donaldson": 1,
-  "dee valladares": 2,
-  "emily flippen": 1,
-  "genevieve mushaluk": 1,
-  "jenna lewis-dougherty": 2,
-  "jonathan young": 4,
-  "joseph hunter": 6,
-  "kamilla karthigesu": 1,
-  "kyle fraser": 1,
-  "mike white": 1,
-  "ozzy lusth": 2,
-  "q burdette": 1,
-  "rick devens": 1,
-  "rizo velovic": 2,
-  "savannah louie": 1,
-  "stephanie lagrossa kendrick": 2,
-  "tiffany ervin": 1
-};
-
-const picksByPerson = [
-  {
-    person: "Caitlyn",
-    picks: ["Christian Hubicki", "Jonathan Young", "Jenna Lewis-Dougherty"],
-  },
-  {
-    person: "Matt",
-    picks: ["Ozzy Lusth", "Kamilla Karthigesu", "Genevieve Mushaluk"],
-  },
-  {
-    person: "Emily",
-    picks: ["Kyle Fraser", "Stephanie Lagrossa Kendrick", "Chrissy Hofbeck"],
-  },
-  {
-    person: "Dylan",
-    picks: ["Rick Devens", "Colby Donaldson", "Savannah Louie"],
-  },
-  {
-    person: "Kevin",
-    picks: ["Charlie Davis", "Joseph Hunter", "Aubry Bracco"],
-  },
-  {
-    person: "Kathy",
-    picks: ["Tiffany Ervin", "Rizo Velovic", "Benjamin \"Coach\" Wade"],
-  },
-  {
-    person: "Alan",
-    picks: ["Dee Valladares", "Emily Flippen", "Q Burdette"],
-  },
-  {
-    person: "Extras",
-    picks: ["Cirie Fields", "Angelina Keeley", "Mike White"],
-  },
-];
-
-
 function makePlayerKey(player) {
   return player.trim().toLowerCase();
 }
 
-const castPlayers = [
-  { name: "Mike White", image: "assets/images/cast/01-mike-white.jpg" },
-  { name: "Cirie Fields", image: "assets/images/cast/02-cirie-fields.jpg" },
-  { name: "Ozzy Lusth", image: "assets/images/cast/03-ozzy-lusth.jpg" },
-  { name: "Benjamin \"Coach\" Wade", image: "assets/images/cast/04-benjamin-coach-wade.jpg" },
-  { name: "Stephanie Lagrossa Kendrick", image: "assets/images/cast/05-stephanie-lagrossa-kendrick.jpg" },
-  { name: "Jenna Lewis-Dougherty", image: "assets/images/cast/06-jenna-lewis-dougherty.jpg" },
-  { name: "Colby Donaldson", image: "assets/images/cast/07-colby-donaldson.jpg" },
-  { name: "Tiffany Ervin", image: "assets/images/cast/08-tiffany-ervin.jpg" },
-  { name: "Charlie Davis", image: "assets/images/cast/09-charlie-davis.jpg" },
-  { name: "Q Burdette", image: "assets/images/cast/10-q-burdette.jpg" },
-  { name: "Emily Flippen", image: "assets/images/cast/11-emily-flippen.jpg" },
-  { name: "Dee Valladares", image: "assets/images/cast/12-dee-valladares.jpg" },
-  { name: "Jonathan Young", image: "assets/images/cast/13-jonathan-young.jpg" },
-  { name: "Christian Hubicki", image: "assets/images/cast/14-christian-hubicki.jpg" },
-  { name: "Angelina Keeley", image: "assets/images/cast/15-angelina-keeley.jpg" },
-  { name: "Kyle Fraser", image: "assets/images/cast/16-kyle-fraser.jpg" },
-  { name: "Aubry Bracco", image: "assets/images/cast/17-aubry-bracco.jpg" },
-  { name: "Chrissy Hofbeck", image: "assets/images/cast/18-chrissy-hofbeck.jpg" },
-  { name: "Rick Devens", image: "assets/images/cast/19-rick-devens.jpg" },
-  { name: "Kamilla Karthigesu", image: "assets/images/cast/20-kamilla-karthigesu.jpg" },
-  { name: "Joseph Hunter", image: "assets/images/cast/21-joseph-hunter.jpg" },
-  { name: "Genevieve Mushaluk", image: "assets/images/cast/22-genevieve-mushaluk.jpg" },
-  { name: "Savannah Louie", image: "assets/images/cast/23-savannah-louie.jpg" },
-  { name: "Rizo Velovic", image: "assets/images/cast/24-rizo-velovic.jpg" }
-];
+let winChances = {};
+let picksByPerson = [];
+let votedOffStatus = {};
+let playerBios = {};
+let castPlayers = [];
+let castImageByKey = new Map();
 
-const castImageByKey = new Map(
-  castPlayers.map((castPlayer) => [makePlayerKey(castPlayer.name), castPlayer.image])
-);
+function getWindowFallbackData() {
+  const fallbackCast = window.SURVIVOR_CAST_DATA;
+  const fallbackPool = window.SURVIVOR_POOL_DATA;
+  if (Array.isArray(fallbackCast) && fallbackPool && typeof fallbackPool === 'object') {
+    return {
+      castData: fallbackCast,
+      poolData: fallbackPool,
+    };
+  }
+  return null;
+}
 
+function showDataLoadError(message) {
+  if (picksGrid) {
+    picksGrid.innerHTML = `<p style="padding:12px;border:1px solid #e09a2b;background:#fff8e8;color:#2f2a22;border-radius:8px;">${message}</p>`;
+  }
+}
 
-// --- Hard-coded voted off state ---
-const votedOffStatus = {
-  "angelina keeley": false,
-  "aubry bracco": false,
-  "benjamin \"coach\" wade": false,
-  "charlie davis": false,
-  "chrissy hofbeck": false,
-  "christian hubicki": false,
-  "cirie fields": false,
-  "colby donaldson": false,
-  "dee valladares": false,
-  "emily flippen": false,
-  "genevieve mushaluk": false,
-  "jenna lewis-dougherty": false,
-  "jonathan young": false,
-  "joseph hunter": false,
-  "kamilla karthigesu": false,
-  "kyle fraser": false,
-  "mike white": false,
-  "ozzy lusth": false,
-  "q burdette": false,
-  "rick devens": false,
-  "rizo velovic": false,
-  "savannah louie": false,
-  "stephanie lagrossa kendrick": false,
-  "tiffany ervin": false
-};
+async function fetchJson(path) {
+  const response = await fetch(path, { cache: 'no-store' });
+  if (!response.ok) {
+    throw new Error(`Failed to load ${path} (${response.status})`);
+  }
+  return response.json();
+}
+
+function validateCastData(data) {
+  if (!Array.isArray(data)) {
+    throw new Error('cast.json must be an array.');
+  }
+  const invalidRows = data.filter((item) => !item || typeof item.name !== 'string' || typeof item.image !== 'string');
+  if (invalidRows.length > 0) {
+    throw new Error('cast.json contains invalid entries. Each entry must include string name and image.');
+  }
+}
+
+function validatePoolData(data) {
+  if (!data || typeof data !== 'object') {
+    throw new Error('pool-data.json must be an object.');
+  }
+  if (!data.winChances || typeof data.winChances !== 'object' || Array.isArray(data.winChances)) {
+    throw new Error('pool-data.json: winChances must be an object.');
+  }
+  if (!Array.isArray(data.picksByPerson)) {
+    throw new Error('pool-data.json: picksByPerson must be an array.');
+  }
+  if (!data.votedOffStatus || typeof data.votedOffStatus !== 'object' || Array.isArray(data.votedOffStatus)) {
+    throw new Error('pool-data.json: votedOffStatus must be an object.');
+  }
+  if (data.bios && (typeof data.bios !== 'object' || Array.isArray(data.bios))) {
+    throw new Error('pool-data.json: bios must be an object when provided.');
+  }
+
+  for (const team of data.picksByPerson) {
+    if (!team || typeof team.person !== 'string' || !Array.isArray(team.picks) || !team.picks.every((name) => typeof name === 'string')) {
+      throw new Error('pool-data.json: each picksByPerson entry must include string person and string[] picks.');
+    }
+  }
+
+  for (const [key, value] of Object.entries(data.votedOffStatus)) {
+    if (typeof value !== 'boolean') {
+      throw new Error(`pool-data.json: votedOffStatus[${key}] must be boolean.`);
+    }
+  }
+
+  for (const [key, value] of Object.entries(data.winChances)) {
+    if (typeof value !== 'number' || Number.isNaN(value)) {
+      throw new Error(`pool-data.json: winChances[${key}] must be a number.`);
+    }
+  }
+}
+
+function validateCrossReferences() {
+  const castKeys = new Set(castPlayers.map((castPlayer) => makePlayerKey(castPlayer.name)));
+  const pickedKeys = new Set();
+
+  for (const team of picksByPerson) {
+    for (const playerName of team.picks) {
+      const playerKey = makePlayerKey(playerName);
+      pickedKeys.add(playerKey);
+      if (!castKeys.has(playerKey)) {
+        console.error(`Missing cast record for picked player: ${playerName}`);
+      }
+      if (winChances[playerKey] === undefined) {
+        console.error(`Missing win chance for picked player: ${playerName}`);
+      }
+      if (votedOffStatus[playerKey] === undefined) {
+        console.error(`Missing votedOffStatus for picked player: ${playerName}`);
+      }
+    }
+  }
+
+  for (const key of Object.keys(winChances)) {
+    if (!castKeys.has(key)) {
+      console.error(`winChances has unknown player key: ${key}`);
+    }
+  }
+  for (const key of Object.keys(votedOffStatus)) {
+    if (!castKeys.has(key)) {
+      console.error(`votedOffStatus has unknown player key: ${key}`);
+    }
+  }
+  for (const key of Object.keys(playerBios)) {
+    if (!castKeys.has(key)) {
+      console.error(`bios has unknown player key: ${key}`);
+    }
+  }
+}
+
+async function initializeApp() {
+  let castData;
+  let poolData;
+  try {
+    [castData, poolData] = await Promise.all([
+      fetchJson('assets/cast.json'),
+      fetchJson('assets/pool-data.json')
+    ]);
+  } catch (fetchError) {
+    const fallback = getWindowFallbackData();
+    if (!fallback) {
+      console.error('Failed to load app data via fetch and no fallback data was found.', fetchError);
+      showDataLoadError('Unable to load player data. Open this site through a local server, or keep assets/cast-data.js and assets/pool-data.js available for local file mode.');
+      return;
+    }
+    castData = fallback.castData;
+    poolData = fallback.poolData;
+    console.warn('Using fallback data from window globals (likely local file mode).');
+  }
+
+  try {
+
+    validateCastData(castData);
+    validatePoolData(poolData);
+
+    castPlayers = castData;
+    castImageByKey = new Map(
+      castPlayers.map((castPlayer) => [makePlayerKey(castPlayer.name), castPlayer.image])
+    );
+
+    winChances = poolData.winChances;
+    picksByPerson = poolData.picksByPerson;
+    votedOffStatus = poolData.votedOffStatus;
+    playerBios = poolData.bios || {};
+
+    validateCrossReferences();
+    render();
+    runEliminationAnimations(poolData);
+  } catch (error) {
+    console.error('Failed to initialize app data:', error);
+    showDataLoadError('Data loaded but failed validation. Check the browser console for details.');
+  }
+}
 
 function isVotedOff(key) {
   return !!votedOffStatus[key];
@@ -163,10 +199,8 @@ const picksGrid = document.getElementById("picksGrid");
 const standingsBody = document.getElementById("standingsBody");
 const template = document.getElementById("playerCardTemplate");
 
-
-
-// Call render after all functions and variables are defined
-window.addEventListener('DOMContentLoaded', render);
+// Call render after data files are loaded and validated
+window.addEventListener('DOMContentLoaded', initializeApp);
 
 function render() {
   picksGrid.innerHTML = "";
@@ -248,34 +282,8 @@ function render() {
       if (nameSpan) {
         nameSpan.textContent = player;
         // Add expandable bio inside card
-        const bios = {
-          "jenna lewis-dougherty": "As the only player to span the entire history of the show, Jenna first competed in the cultural phenomenon of Season 1: Borneo, where she famously missed a video from home. She later returned for Season 8: All-Stars, leading a ruthless 'anti-winner' alliance that secured her a 3rd-place finish. She returns decades later to prove that an 'Old School' legend can dominate the 'New Era.'",
-          "ozzy lusth": "Widely considered the greatest physical specimen to ever play, Ozzy's journey began as the runner-up in Season 13: Cook Islands. He became a fan favorite in Season 16: Micronesia, a redemption seeker in Season 23: South Pacific, and a veteran presence in Season 34: Game Changers. For his fifth outing, he plans to make his provider skills indispensable to avoid being seen as a late-game threat.",
-          "cirie fields": "The 'mastermind' who started as the woman who 'got off the couch' in Season 12: Panama, Cirie went on to become a tactical legend in Season 16: Micronesia, Season 20: Heroes vs. Villains, and Season 34: Game Changers. Despite never winning, her social manipulation is feared by all. Fresh off a victory on The Traitors, she enters Season 50 with the biggest target on her back.",
-          "christian hubicki": "The breakout star of Season 37: David vs. Goliath, Christian is a robotics professor who combined elite puzzle-solving with an infectious personality. He was famously targeted for being 'too likable' to take to the end. In his return, he aims to use his scientific mind to 'de-code' the frantic pace of modern Survivor and mask his threat level.",
-          "rick devens": "After being voted out and battling back from the Season 38: Edge of Extinction, Rick became a one-man wrecking ball, finding multiple idols and winning crucial challenges. His high-energy 'news anchor' persona made him a massive TV personality. He returns to Season 50 looking to repeat his idol-hunting dominance but with a better social finish.",
-          "emily flippen": "Emily provided one of the most compelling 'redemption arcs' in Season 45, moving from a blunt, abrasive outsider on Day 1 to a sophisticated strategic power player by the mid-game. As an investment analyst, she views the game through a lens of risk and reward, hoping to leverage her 'underdog' status against the massive legends on her tribe.",
-          "savannah louie": "The reigning Sole Survivor of Season 49, Savannah is a former reporter who used her interviewing skills to 'interrogate' her way to the million dollars. Coming into Season 50 back-to-back, she has the advantage of being a fresh enigma, but the disadvantage of the 'winner' title looming over her every move.",
-          "joseph hunter": "A fire captain who served as the moral and physical anchor for his tribe in Season 48, Joe is a traditionalist who values loyalty and hard work. He finished in the top five of his original season by being a 'shield' for others. In Season 50, he looks to repeat that role while ensuring he isn't the final person cut before the finish line.",
-          "benjamin \"coach\" wade": "The 'Dragon Slayer' first brought his eccentric stories to Season 18: Tocantins, before returning for a brief stint in Season 20: Heroes vs. Villains and a dominant runner-up performance in Season 23: South Pacific. After a 14-year hiatus, Coach returns claiming to have found true Zen, though fans expect the same spiritual theatrics that made him an icon.",
-          "chrissy hofbeck": "An actuary who broke barriers for older female contestants in Season 35: Heroes vs. Healers vs. Hustlers, Chrissy tied the record for female individual immunity wins with four. She was a strategic force who fell just short of the win. She returns to Season 50 to prove that her mathematical approach to the game is still the ultimate winning formula.",
-          "mike white": "Before winning Emmys for The White Lotus, Mike was the runner-up of Season 37: David vs. Goliath. He played a deceptively 'chill' game while pulling the strings behind the scenes. Because he is already a successful Hollywood creator, he plays with a 'nothing to lose' attitude that makes him one of the most dangerous wildcards in the cast.",
-          "dee valladares": "The winner of Season 45, Dee is remembered for her 'all-business' mindset and her fierce loyalty to her core alliance—until the moment she had to cut them. She is a multi-tooled player who can win challenges, find idols, and manipulate votes. She enters Season 50 as the gold standard for 'New Era' winners.",
-          "jonathan young": "Jonathan redefined what it meant to be a 'challenge beast' in Season 42, almost single-handedly winning tribal immunities for his team. While his physical strength is his calling card, his bio for Season 50 emphasizes a desire to show more social depth and prove he isn't just a 'shield' for the strategic players.",
-          "tiffany ervin": "A vibrant artist from Season 46, Tiffany was a social powerhouse who was unfortunately blindsided while holding a Hidden Immunity Idol. She returns for Season 50 with a 'redemption' mindset, determined to play a more paranoid, careful game to ensure she never leaves the island with an advantage in her pocket again.",
-          "charlie davis": "A law student who played an impeccable social game in Season 46, Charlie lost the title of Sole Survivor in a heartbreaking 5-3-0 jury vote. Known for his Taylor Swift references and 'nice guy' demeanor, he returns to Season 50 with a chip on his shoulder, ready to prove he can play a more cutthroat game to secure the win.",
-          "kamilla karthigesu": "In Season 48, Kamilla was known for her 'bold and brash' strategic moves and her ability to navigate complex social webs. She narrowly missed the finale after a loss in the fire-making challenge. She enters Season 50 looking to align with 'alpha' personalities to hide her own status as a calculating strategist.",
-          "colby donaldson": "The original 'Golden Boy' of Season 2: The Australian Outback, Colby won five individual immunities and became a national hero. After returning for Season 8: All-Stars and Season 20: Heroes vs. Villains, he is looking to wash away the 'Superman in a fat suit' comments from his last outing and reclaim his status as a physical legend.",
-          "stephanie lagrossa kendrick": "Stephenie became a legend in Season 10: Palau as the sole survivor of the decimated Ulong tribe. She returned as a 'villainous' runner-up in Season 11: Guatemala and had a short stay in Season 20: Heroes vs. Villains. Now a mother of three, she brings that same 'never quit' intensity to Season 50.",
-          "aubry bracco": "Aubry's journey from a nervous 'nerd' to a strategic warrior in Season 32: Kaôh Rōng is one of the show's most famous arcs. She also competed in Season 34: Game Changers and Season 38: Edge of Extinction. She returns to the beach with a wealth of experience, hoping to play a more 'under the radar' game than her previous high-profile appearances.",
-          "angelina keeley": "The 'Negotiator' of Season 37: David vs. Goliath, Angelina is famous for getting rice for her tribe and her quest for a jacket. Despite the memes, she was a savvy finalist who understood the game's mechanics perfectly. She returns to Season 50 promising more 'high-level' negotiations and a bit more self-awareness.",
-          "q burdette": "The breakout character of Season 46, Q's 'Big Mistake!' catchphrase and unpredictable gameplay made him a polarizing force. He famously tried to quit and then fought to stay, causing total chaos. He enters Season 50 with a 'take no prisoners' attitude, targeting winners and legends from Day 1.",
-          "kyle fraser": "The winner of Season 48, Kyle used his background as a trial attorney to dominate the social game and win over a difficult jury. As a member of the 'New Era' winner's circle, he knows he has a target on his back and plans to use his 'courtroom' persuasion to keep the heat on the older legends.",
-          "genevieve mushaluk": "A quiet but lethal strategist from Season 47, Genevieve made it to the Final Five by staying flexible and making moves at the perfect time. In a tribe full of 'Big Personalities' like Colby and Q, she hopes to use her lower profile to slip through the cracks and strike when the legends least expect it.",
-          "rizo velovic": "Commonly known as the 'RizGod,' Rizo was the charismatic runner-up of Season 49. He played a flashy, social game that made him a fan favorite but ultimately fell short to his ally, Savannah. He returns to Season 50 with a 'hungry' energy, desperate to prove he can win the million on his own terms."
-        };
         const playerKey = makePlayerKey(player);
-        const bio = bios[playerKey];
+        const bio = playerBios[playerKey];
         if (bio) {
           // Create bio element
           const bioDiv = document.createElement('div');
@@ -393,10 +401,283 @@ function renderStandings() {
 function updateCardState(card, isVotedOff) {
   card.classList.toggle("voted-off", isVotedOff);
   card.setAttribute("aria-pressed", String(isVotedOff));
-  // No status pill or label to update, and odds are set in render()
+  // Apply permanent grayscale immediately for already-eliminated players
+  if (isVotedOff) {
+    const thumb = card.querySelector('.player-thumb');
+    if (thumb) thumb.style.filter = 'grayscale(100%)';
+  }
 }
 
+// ============================================================
+//  ELIMINATION ANIMATION ENGINE
+// ============================================================
 
-function makePlayerKey(player) {
-  return player.trim().toLowerCase();
+function detectNewEliminations(currentVotedOff) {
+  const STORAGE_KEY = 'survivor_voted_off_cache';
+  let previous = {};
+  try {
+    previous = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+  } catch (e) { /* ignore parse errors */ }
+
+  const newlyEliminated = [];
+  for (const [key, isOut] of Object.entries(currentVotedOff)) {
+    if (isOut && !previous[key]) {
+      newlyEliminated.push(key);
+    }
+  }
+
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(currentVotedOff));
+  return newlyEliminated;
+}
+
+function findOwner(playerKey) {
+  for (const entry of picksByPerson) {
+    for (const pick of entry.picks) {
+      if (makePlayerKey(pick) === playerKey) return entry.person;
+    }
+  }
+  return null;
+}
+
+// ── Canvas spark burst after torch snuff ──────────────────────
+function launchSparks(canvas) {
+  const ctx = canvas.getContext('2d');
+  canvas.width  = canvas.offsetWidth  || 280;
+  canvas.height = canvas.offsetHeight || 373;
+  const cx = canvas.width / 2;
+  const cy = canvas.height * 0.82;
+  const particles = [];
+  for (let i = 0; i < 90; i++) {
+    const angle  = (Math.random() * Math.PI) + Math.PI; // upward hemisphere
+    const speed  = Math.random() * 4.5 + 1.5;
+    const hue    = Math.random() * 40 + 15; // orange-gold
+    particles.push({
+      x: cx + (Math.random() - 0.5) * canvas.width * 0.5,
+      y: cy,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      life: 1,
+      decay: Math.random() * 0.014 + 0.007,
+      size: Math.random() * 2.8 + 0.8,
+      color: `hsl(${hue}, 100%, ${Math.random() * 35 + 55}%)`,
+    });
+  }
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    let alive = false;
+    for (const p of particles) {
+      if (p.life <= 0) continue;
+      alive = true;
+      p.x   += p.vx;
+      p.y   += p.vy;
+      p.vy  += 0.1;   // gravity
+      p.vx  *= 0.985; // drag
+      p.life -= p.decay;
+      ctx.globalAlpha = Math.max(0, p.life);
+      ctx.fillStyle   = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, Math.max(0.1, p.size * p.life), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    if (alive) requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+}
+
+// ── Build CSS flame layers inside fireWrap ────────────────────
+function buildFlames(fireWrap) {
+  const layers = [
+    { left: '5%',  w: '28%', h: '72px',  dur: 0.92, delay: 0,    c: ['#ff4500','#ff6b00','#cc1100'] },
+    { left: '20%', w: '36%', h: '100px', dur: 0.74, delay: 0.11, c: ['#ff6b00','#ffaa00','#ff4400'] },
+    { left: '14%', w: '30%', h: '82px',  dur: 1.08, delay: 0.22, c: ['#ff3300','#ff7700','#dd1100'] },
+    { left: '38%', w: '32%', h: '108px', dur: 0.81, delay: 0.04, c: ['#ffcc00','#ffaa00','#ff8800'] },
+    { left: '52%', w: '34%', h: '90px',  dur: 0.97, delay: 0.17, c: ['#ff4500','#ff6600','#ff2200'] },
+    { left: '62%', w: '26%', h: '74px',  dur: 1.03, delay: 0.07, c: ['#ff5500','#ff8800','#ff3300'] },
+    { left: '28%', w: '44%', h: '62px',  dur: 0.63, delay: 0.30, c: ['#ffee44','#ffcc00','#ffaa00'] },
+  ];
+  layers.forEach((f, i) => {
+    const el = document.createElement('div');
+    el.className = 'elim-flame';
+    el.style.cssText = [
+      `left:${f.left}`, `width:${f.w}`, `height:${f.h}`,
+      `background:radial-gradient(ellipse at 50% 100%,${f.c[2]} 0%,${f.c[0]} 38%,${f.c[1]} 62%,transparent 100%)`,
+      `filter:blur(${3 + (i % 3)}px)`,
+      `animation-duration:${f.dur}s`,
+      `animation-delay:${f.delay}s`,
+      `opacity:0.88`,
+    ].join(';');
+    fireWrap.appendChild(el);
+  });
+}
+
+// ── Full cinematic modal ───────────────────────────────────────
+function showEliminationModal(playerKey, imagePath, playerDisplayName, ownerName) {
+  return new Promise(resolve => {
+
+    // Helper: show element via class
+    const show = (el, delayMs) => setTimeout(() => el.classList.add('elim-visible'), delayMs);
+
+    // ── Letterboxes ──
+    const lbTop = document.createElement('div');
+    lbTop.className = 'elim-letterbox top';
+    const lbBot = document.createElement('div');
+    lbBot.className = 'elim-letterbox bottom';
+    document.body.append(lbTop, lbBot);
+    requestAnimationFrame(() => {
+      lbTop.classList.add('open');
+      lbBot.classList.add('open');
+    });
+
+    // ── Overlay ──
+    const overlay = document.createElement('div');
+    overlay.className = 'elim-overlay';
+
+    // Photo wrap
+    const photoWrap = document.createElement('div');
+    photoWrap.className = 'elim-photo-wrap';
+
+    const img = new Image();
+    img.className = 'elim-photo';
+    img.src = imagePath;
+    img.alt = playerDisplayName;
+
+    const vignette = document.createElement('div');
+    vignette.className = 'elim-vignette';
+
+    const fireWrap = document.createElement('div');
+    fireWrap.className = 'elim-fire-wrap';
+    buildFlames(fireWrap);
+
+    const sparkCanvas = document.createElement('canvas');
+    sparkCanvas.className = 'elim-spark-canvas';
+
+    photoWrap.append(img, vignette, fireWrap, sparkCanvas);
+
+    // Text elements
+    const title = document.createElement('div');
+    title.className = 'elim-title';
+    title.textContent = 'The Tribe Has Spoken';
+
+    const subtitle = document.createElement('div');
+    subtitle.className = 'elim-subtitle';
+    subtitle.textContent = playerDisplayName;
+
+    const callout = document.createElement('div');
+    callout.className = 'elim-owner-callout';
+    if (ownerName) callout.textContent = `${ownerName}'s torch has been snuffed`;
+
+    const dismiss = document.createElement('div');
+    dismiss.className = 'elim-dismiss';
+    dismiss.textContent = 'Click anywhere to continue';
+
+    overlay.append(photoWrap, title, subtitle, callout, dismiss);
+    document.body.appendChild(overlay);
+
+    // Trigger overlay + photo fade-in
+    requestAnimationFrame(() => {
+      overlay.classList.add('elim-visible');
+      show(photoWrap, 100);
+    });
+
+    // Sync canvas size after layout
+    setTimeout(() => {
+      sparkCanvas.width  = photoWrap.offsetWidth  || 280;
+      sparkCanvas.height = photoWrap.offsetHeight || 373;
+    }, 200);
+
+    // 1.6s — desaturate
+    setTimeout(() => img.classList.add('desaturated'), 1600);
+
+    // 3.8s — snuff fire, launch sparks
+    setTimeout(() => {
+      fireWrap.classList.add('snuffed');
+      launchSparks(sparkCanvas);
+    }, 3800);
+
+    // 4.8s — title
+    show(title, 4800);
+
+    // 5.8s — player name
+    show(subtitle, 5800);
+
+    // 6.6s — owner callout
+    if (ownerName) show(callout, 6600);
+
+    // 8s — dismiss hint + enable click
+    let dismissible = false;
+    setTimeout(() => {
+      show(dismiss, 0);
+      dismissible = true;
+    }, 8000);
+
+    function doClose() {
+      if (!dismissible) return;
+      overlay.style.transition = 'opacity 0.65s ease';
+      overlay.style.opacity    = '0';
+      lbTop.classList.remove('open');
+      lbBot.classList.remove('open');
+      setTimeout(() => {
+        overlay.remove();
+        lbTop.remove();
+        lbBot.remove();
+        resolve();
+      }, 700);
+    }
+
+    overlay.addEventListener('click', doClose);
+    setTimeout(doClose, 13000); // auto-close after 13s
+  });
+}
+
+// ── Permanent badge + callout on owner's team card ────────────
+function markOwnerCard(ownerName, playerDisplayName) {
+  const personCards = document.querySelectorAll('article.person-card');
+  for (const card of personCards) {
+    const heading = card.querySelector('h2.person-name');
+    if (!heading) continue;
+    // Strip any existing badge text before comparing
+    const rawText = Array.from(heading.childNodes)
+      .filter(n => n.nodeType === Node.TEXT_NODE)
+      .map(n => n.textContent).join('').trim();
+    if (rawText.toLowerCase() !== ownerName.toLowerCase()) continue;
+
+    if (!heading.querySelector('.elim-rip-badge')) {
+      const badge = document.createElement('span');
+      badge.className = 'elim-rip-badge';
+      badge.textContent = 'torch snuffed';
+      heading.appendChild(badge);
+    }
+    const callout = document.createElement('div');
+    callout.className = 'elim-snuffed-callout';
+    callout.innerHTML = `${ownerName}'s torch has been snuffed<br><span style="font-size:0.85em;opacity:0.75;">${playerDisplayName} &mdash; voted off the island</span>`;
+    card.appendChild(callout);
+    break;
+  }
+}
+
+// ── Master entry point ────────────────────────────────────────
+async function runEliminationAnimations(poolData) {
+  const newlyEliminated = detectNewEliminations(poolData.votedOffStatus);
+  if (newlyEliminated.length === 0) return;
+
+  await new Promise(r => setTimeout(r, 800));
+
+  for (const playerKey of newlyEliminated) {
+    const imagePath = castImageByKey.get(playerKey);
+    if (!imagePath) {
+      console.warn(`[Elimination] No image for: ${playerKey}`);
+      continue;
+    }
+
+    const displayName = playerKey.split(' ')
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    const ownerName = findOwner(playerKey);
+
+    await showEliminationModal(playerKey, imagePath, displayName, ownerName);
+
+    if (ownerName) markOwnerCard(ownerName, displayName);
+
+    if (newlyEliminated.length > 1) await new Promise(r => setTimeout(r, 1200));
+  }
 }
