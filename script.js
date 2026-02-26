@@ -125,18 +125,6 @@ let castImageByKey = new Map();
 const castDataPathCandidates = ['assets/cast.json', './assets/cast.json', '/assets/cast.json'];
 const poolDataPathCandidates = ['assets/pool-data.json', './assets/pool-data.json', '/assets/pool-data.json'];
 
-function getWindowFallbackData() {
-  const fallbackCast = window.SURVIVOR_CAST_DATA;
-  const fallbackPool = window.SURVIVOR_POOL_DATA;
-  if (Array.isArray(fallbackCast) && fallbackPool && typeof fallbackPool === 'object') {
-    return {
-      castData: fallbackCast,
-      poolData: fallbackPool,
-    };
-  }
-  return null;
-}
-
 function showDataLoadError(message) {
   if (picksGrid) {
     picksGrid.innerHTML = `<p style="padding:12px;border:1px solid #e09a2b;background:#fff8e8;color:#2f2a22;border-radius:8px;">${message}</p>`;
@@ -258,22 +246,14 @@ function validateCrossReferences() {
 async function initializeApp() {
   let castData;
   let poolData;
-  const fallback = getWindowFallbackData();
-
-  if (fallback) {
-    castData = fallback.castData;
-    poolData = fallback.poolData;
-    console.info('Using app data from window globals (assets/cast-data.js + assets/pool-data.js).');
-  } else {
-    try {
-      const loadedData = await loadAppData();
-      castData = loadedData.castData;
-      poolData = loadedData.poolData;
-    } catch (fetchError) {
-      console.error('Failed to load app data from both window globals and JSON fetch.', fetchError);
-      showDataLoadError('Unable to load player data. Verify assets/cast-data.js / assets/pool-data.js or assets/cast.json / assets/pool-data.json are deployed and reachable.');
-      return;
-    }
+  try {
+    const loadedData = await loadAppData();
+    castData = loadedData.castData;
+    poolData = loadedData.poolData;
+  } catch (fetchError) {
+    console.error('Failed to load app data from JSON fetch.', fetchError);
+    showDataLoadError('Unable to load player data. Verify assets/cast.json and assets/pool-data.json are deployed and reachable.');
+    return;
   }
 
   try {
