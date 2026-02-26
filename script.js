@@ -1,28 +1,113 @@
+const episodeSchedulePathCandidates = ['assets/episodes.json', './assets/episodes.json', '/assets/episodes.json'];
+let episodeScheduleLoadError = '';
+
+async function loadEpisodeSchedule() {
+  episodeScheduleLoadError = '';
+
+  for (const path of episodeSchedulePathCandidates) {
+    try {
+      const response = await fetch(path, { cache: 'no-store' });
+      if (!response.ok) {
+        throw new Error(`Failed to load episode schedule (${response.status})`);
+      }
+
+      const data = await response.json();
+      if (!Array.isArray(data)) {
+        throw new Error('Episode schedule JSON is not an array');
+      }
+
+      return data
+        .filter((episode) => episode && typeof episode.title === 'string' && typeof episode.airDate === 'string')
+        .sort((a, b) => new Date(a.airDate) - new Date(b.airDate));
+    } catch (error) {
+      episodeScheduleLoadError = error?.message || 'Unknown schedule loading error';
+    }
+  }
+
+  console.error('Unable to load episode schedule:', episodeScheduleLoadError);
+  return [];
+}
+
 // --- Countdown Clock ---
-function startCountdown() {
+async function startCountdown() {
   const countdownElem = document.getElementById('countdownClock');
   if (!countdownElem) return;
-  // Survivor 50 premiere: Feb 25, 2026, 8:00 PM EST (convert to UTC: 2026-02-26T01:00:00Z)
-  const premiereDate = new Date('2026-02-26T01:00:00Z');
+
+  const episodeSchedule = await loadEpisodeSchedule();
+  if (episodeSchedule.length === 0) {
+    if (window.location.protocol === 'file:') {
+      countdownElem.innerHTML = "<span style='color:#e09a2b;'>Episode schedule unavailable in file preview. Run from a local server.</span>";
+    } else {
+      countdownElem.innerHTML = "<span style='color:#e09a2b;'>Episode schedule unavailable.</span>";
+    }
+    return;
+  }
+
+  function getNextEpisode(now) {
+    return episodeSchedule.find((episode) => new Date(episode.airDate) > now) || null;
+  }
+
+  function getEpisodeCurrentlyOn(now) {
+    return episodeSchedule.find((episode) => {
+      const start = new Date(episode.airDate);
+      const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
+      return now >= start && now < end;
+    }) || null;
+  }
+
+  function formatEpisodeDate(date) {
+    return date.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      timeZone: 'America/New_York'
+    });
+  }
+
   function updateCountdown() {
     const now = new Date();
-    let diff = premiereDate - now;
-    if (diff < 0) diff = 0;
+    const currentlyOn = getEpisodeCurrentlyOn(now);
+
+    if (currentlyOn) {
+      const startDate = new Date(currentlyOn.airDate);
+      const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
+      const remaining = Math.max(0, endDate - now);
+      const hours = Math.floor((remaining / (1000 * 60 * 60)) % 24);
+      const minutes = Math.floor((remaining / (1000 * 60)) % 60);
+      const seconds = Math.floor((remaining / 1000) % 60);
+
+      countdownElem.innerHTML =
+        `<span class="countdown-number">${hours}</span><span class="countdown-label">h</span>` +
+        `<span class="countdown-number">${minutes}</span><span class="countdown-label">m</span>` +
+        `<span class="countdown-number">${seconds}</span><span class="countdown-label">s</span>` +
+        `<br><span style='font-size:1.02rem;color:#e09a2b;font-weight:800;'>NOW ON: ${currentlyOn.title}</span>` +
+        `<br><span style='font-size:0.95rem;color:#7e5b19;font-weight:600;'>Ends at 10:00 PM ET</span>`;
+      return;
+    }
+
+    const nextEpisode = getNextEpisode(now);
+
+    if (!nextEpisode) {
+      countdownElem.innerHTML = "<span style='color:#e09a2b;'>All scheduled episodes have aired.</span>";
+      return;
+    }
+
+    const nextAirDate = new Date(nextEpisode.airDate);
+    const diff = nextAirDate - now;
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
     const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
     const minutes = Math.floor((diff / (1000 * 60)) % 60);
     const seconds = Math.floor((diff / 1000) % 60);
-    if (diff === 0) {
-      countdownElem.innerHTML = "<span style='color:#e09a2b;'>Survivor 50 has begun!</span>";
-    } else {
-      countdownElem.innerHTML =
-        `<span class=\"countdown-number\">${days}</span><span class=\"countdown-label\">d</span>` +
-        `<span class=\"countdown-number\">${hours}</span><span class=\"countdown-label\">h</span>` +
-        `<span class=\"countdown-number\">${minutes}</span><span class=\"countdown-label\">m</span>` +
-        `<span class=\"countdown-number\">${seconds}</span><span class=\"countdown-label\">s</span>` +
-        `<br><span style='font-size:1.08rem;color:#a97a1a;font-weight:600;'>until Survivor 50!</span>`;
-    }
+
+    countdownElem.innerHTML =
+      `<span class=\"countdown-number\">${days}</span><span class=\"countdown-label\">d</span>` +
+      `<span class=\"countdown-number\">${hours}</span><span class=\"countdown-label\">h</span>` +
+      `<span class=\"countdown-number\">${minutes}</span><span class=\"countdown-label\">m</span>` +
+      `<span class=\"countdown-number\">${seconds}</span><span class=\"countdown-label\">s</span>` +
+      `<br><span style='font-size:1.02rem;color:#a97a1a;font-weight:700;'>Next: ${nextEpisode.title}</span>` +
+      `<br><span style='font-size:0.95rem;color:#7e5b19;font-weight:600;'>${formatEpisodeDate(nextAirDate)} • 8:00 PM ET</span>`;
   }
+
   updateCountdown();
   setInterval(updateCountdown, 1000);
 }
@@ -140,7 +225,7 @@ const votedOffStatus = {
   "dee valladares": false,
   "emily flippen": false,
   "genevieve mushaluk": false,
-  "jenna lewis-dougherty": false,
+  "jenna lewis-dougherty": true,
   "jonathan young": false,
   "joseph hunter": false,
   "kamilla karthigesu": false,
@@ -159,9 +244,47 @@ function isVotedOff(key) {
   return !!votedOffStatus[key];
 }
 
+const votedOutSeenStorageKey = "survivor-voted-out-seen-v1";
+const newlyVotedOutKeys = getNewlyVotedOutKeys();
+
+function getNewlyVotedOutKeys() {
+  const currentlyVotedOutKeys = Object.keys(votedOffStatus).filter((key) => votedOffStatus[key]);
+  let seenKeys = [];
+
+  try {
+    const raw = localStorage.getItem(votedOutSeenStorageKey);
+    const parsed = raw ? JSON.parse(raw) : [];
+    if (Array.isArray(parsed)) {
+      seenKeys = parsed;
+    }
+  } catch (error) {
+    seenKeys = [];
+  }
+
+  const seenSet = new Set(seenKeys.map((key) => String(key).toLowerCase()));
+  const newlyVotedOut = currentlyVotedOutKeys.filter((key) => !seenSet.has(key));
+
+  try {
+    localStorage.setItem(votedOutSeenStorageKey, JSON.stringify(currentlyVotedOutKeys));
+  } catch (error) {
+    // Ignore storage write failures (private mode/quota issues)
+  }
+
+  return new Set(newlyVotedOut);
+}
+
 const picksGrid = document.getElementById("picksGrid");
 const standingsBody = document.getElementById("standingsBody");
 const template = document.getElementById("playerCardTemplate");
+const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+const revealTimings = {
+  riseDurationMs: 1400,
+  holdBeforeSpeechMs: 3000,
+  speechAnimationDurationMs: 3200,
+  holdAfterSpeechMs: 1400,
+  fallDurationMs: 1800
+};
 
 
 
@@ -205,6 +328,7 @@ function render() {
       const card = template.content.firstElementChild.cloneNode(true);
       const key = makePlayerKey(player);
       const votedOff = isVotedOff(key);
+      const isNewlyVotedOut = votedOff && newlyVotedOutKeys.has(key);
       card.dataset.key = key;
       const thumbnail = card.querySelector(".player-thumb");
       const imagePath = castImageByKey.get(key);
@@ -247,6 +371,12 @@ function render() {
       const nameSpan = card.querySelector('.player-name');
       if (nameSpan) {
         nameSpan.textContent = player;
+        if (votedOff) {
+          const tribeBadge = document.createElement('span');
+          tribeBadge.className = 'player-tribe-badge';
+          tribeBadge.textContent = 'THE TRIBE HAS SPOKEN';
+          nameSpan.appendChild(tribeBadge);
+        }
         // Add expandable bio inside card
         const bios = {
           "jenna lewis-dougherty": "As the only player to span the entire history of the show, Jenna first competed in the cultural phenomenon of Season 1: Borneo, where she famously missed a video from home. She later returned for Season 8: All-Stars, leading a ruthless 'anti-winner' alliance that secured her a 3rd-place finish. She returns decades later to prove that an 'Old School' legend can dominate the 'New Era.'",
@@ -314,7 +444,7 @@ function render() {
       // Remove status pill if present
       const statusPill = card.querySelector('.player-status');
       if (statusPill) statusPill.remove();
-      updateCardState(card, votedOff);
+      updateCardState(card, votedOff, isNewlyVotedOut);
       playersList.appendChild(card);
     }
     personCard.append(personName, playersList);
@@ -322,6 +452,114 @@ function render() {
   }
 
   renderStandings();
+  queueVotedOutRevealAnimation();
+}
+
+let revealQueuePromise = Promise.resolve();
+
+function queueVotedOutRevealAnimation() {
+  const newlyVotedCards = Array.from(document.querySelectorAll('.player-card.needs-tribe-reveal'));
+  if (newlyVotedCards.length === 0) return;
+
+  if (reducedMotionQuery.matches) {
+    newlyVotedCards.forEach((card) => {
+      card.classList.remove('needs-tribe-reveal');
+      card.classList.remove('pending-tribe-reveal');
+    });
+    return;
+  }
+
+  revealQueuePromise = revealQueuePromise.then(async () => {
+    for (const card of newlyVotedCards) {
+      if (!document.body.contains(card)) continue;
+      await animateVotedOutReveal(card);
+      card.classList.remove('needs-tribe-reveal');
+    }
+  });
+}
+
+function getOrCreateRevealLayer() {
+  let layer = document.getElementById('votedOutRevealLayer');
+  if (layer) return layer;
+
+  layer = document.createElement('div');
+  layer.id = 'votedOutRevealLayer';
+  layer.className = 'voted-out-reveal-layer';
+  layer.innerHTML = '<div class="voted-out-reveal-backdrop"></div>';
+  document.body.appendChild(layer);
+  return layer;
+}
+
+function waitForMs(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function runElementAnimation(element, keyframes, options) {
+  const animation = element.animate(keyframes, options);
+  return animation.finished.catch(() => undefined);
+}
+
+async function animateVotedOutReveal(card) {
+  const startRect = card.getBoundingClientRect();
+  if (startRect.width === 0 || startRect.height === 0) return;
+
+  const revealLayer = getOrCreateRevealLayer();
+  revealLayer.classList.add('active');
+
+  const revealCard = card.cloneNode(true);
+  revealCard.classList.add('voted-out-reveal-card');
+  revealCard.classList.remove('needs-tribe-reveal');
+  revealCard.classList.remove('tribe-has-spoken');
+  revealCard.style.left = `${startRect.left}px`;
+  revealCard.style.top = `${startRect.top}px`;
+  revealCard.style.width = `${startRect.width}px`;
+  revealCard.style.height = `${startRect.height}px`;
+  revealCard.style.margin = '0';
+  revealCard.style.pointerEvents = 'none';
+  revealLayer.appendChild(revealCard);
+
+  card.style.visibility = 'hidden';
+
+  const targetWidth = Math.min(window.innerWidth * 0.86, 520);
+  const scale = targetWidth / Math.max(startRect.width, 1);
+  const targetLeft = (window.innerWidth - startRect.width) / 2;
+  const targetTop = Math.max((window.innerHeight - startRect.height * scale) / 2, 24);
+
+  await runElementAnimation(
+    revealCard,
+    [
+      { left: `${startRect.left}px`, top: `${startRect.top}px`, transform: 'scale(1)' },
+      { left: `${targetLeft}px`, top: `${targetTop}px`, transform: `scale(${scale})` }
+    ],
+    { duration: revealTimings.riseDurationMs, easing: 'cubic-bezier(0.2, 0.75, 0.22, 1)', fill: 'forwards' }
+  );
+
+  await waitForMs(revealTimings.holdBeforeSpeechMs);
+
+  revealCard.style.setProperty('--tribe-animation-duration', `${revealTimings.speechAnimationDurationMs}ms`);
+  revealCard.classList.remove('pending-tribe-reveal');
+
+  revealCard.classList.remove('tribe-has-spoken');
+  void revealCard.offsetWidth;
+  revealCard.classList.add('tribe-has-spoken');
+
+  await waitForMs(revealTimings.speechAnimationDurationMs + revealTimings.holdAfterSpeechMs);
+
+  await runElementAnimation(
+    revealCard,
+    [
+      { left: `${targetLeft}px`, top: `${targetTop}px`, transform: `scale(${scale})` },
+      { left: `${startRect.left}px`, top: `${startRect.top}px`, transform: 'scale(1)' }
+    ],
+    { duration: revealTimings.fallDurationMs, easing: 'cubic-bezier(0.4, 0.0, 0.2, 1)', fill: 'forwards' }
+  );
+
+  card.classList.remove('pending-tribe-reveal');
+  card.style.visibility = '';
+  revealCard.remove();
+  if (!revealLayer.querySelector('.voted-out-reveal-card')) {
+    revealLayer.classList.remove('active');
+  }
 }
 
 function renderStandings() {
@@ -363,12 +601,9 @@ function renderStandings() {
     .sort((a, b) => {
       if (a.person === "Extras" && b.person !== "Extras") return 1;
       if (b.person === "Extras" && a.person !== "Extras") return -1;
-      // Sort by odds (descending), then alphabetically
-      /*
-      const aOdds = a.odds === "-" ? -1 : parseFloat(a.odds);
-      const bOdds = b.odds === "-" ? -1 : parseFloat(b.odds);
-      if (bOdds !== aOdds) return bOdds - aOdds;
-      */
+      if (b.remainingCount !== a.remainingCount) {
+        return b.remainingCount - a.remainingCount;
+      }
       return a.person.localeCompare(b.person);
     });
 
@@ -390,8 +625,11 @@ function renderStandings() {
   }
 }
 
-function updateCardState(card, isVotedOff) {
+function updateCardState(card, isVotedOff, isNewlyVotedOut = false) {
   card.classList.toggle("voted-off", isVotedOff);
+  card.classList.remove("tribe-has-spoken");
+  card.classList.toggle("needs-tribe-reveal", isNewlyVotedOut);
+  card.classList.toggle("pending-tribe-reveal", isNewlyVotedOut);
   card.setAttribute("aria-pressed", String(isVotedOff));
   // No status pill or label to update, and odds are set in render()
 }
