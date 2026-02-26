@@ -122,6 +122,8 @@ let votedOffStatus = {};
 let playerBios = {};
 let castPlayers = [];
 let castImageByKey = new Map();
+const castDataPathCandidates = ['assets/cast.json', './assets/cast.json', '/assets/cast.json'];
+const poolDataPathCandidates = ['assets/pool-data.json', './assets/pool-data.json', '/assets/pool-data.json'];
 
 function getWindowFallbackData() {
   const fallbackCast = window.SURVIVOR_CAST_DATA;
@@ -147,6 +149,27 @@ async function fetchJson(path) {
     throw new Error(`Failed to load ${path} (${response.status})`);
   }
   return response.json();
+}
+
+async function fetchJsonFromCandidates(paths, label) {
+  let lastError = null;
+  for (const path of paths) {
+    try {
+      return await fetchJson(path);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw new Error(`Unable to load ${label} from candidates: ${paths.join(', ')}. Last error: ${lastError?.message || 'Unknown error'}`);
+}
+
+async function loadAppData() {
+  const [castData, poolData] = await Promise.all([
+    fetchJsonFromCandidates(castDataPathCandidates, 'cast data'),
+    fetchJsonFromCandidates(poolDataPathCandidates, 'pool data')
+  ]);
+
+  return { castData, poolData };
 }
 
 function validateCastData(data) {
@@ -235,21 +258,22 @@ function validateCrossReferences() {
 async function initializeApp() {
   let castData;
   let poolData;
-  try {
-    [castData, poolData] = await Promise.all([
-      fetchJson('assets/cast.json'),
-      fetchJson('assets/pool-data.json')
-    ]);
-  } catch (fetchError) {
-    const fallback = getWindowFallbackData();
-    if (!fallback) {
-      console.error('Failed to load app data via fetch and no fallback data was found.', fetchError);
-      showDataLoadError('Unable to load player data. Open this site through a local server, or keep assets/cast-data.js and assets/pool-data.js available for local file mode.');
-      return;
-    }
+  const fallback = getWindowFallbackData();
+
+  if (fallback) {
     castData = fallback.castData;
     poolData = fallback.poolData;
-    console.warn('Using fallback data from window globals (likely local file mode).');
+    console.info('Using app data from window globals (assets/cast-data.js + assets/pool-data.js).');
+  } else {
+    try {
+      const loadedData = await loadAppData();
+      castData = loadedData.castData;
+      poolData = loadedData.poolData;
+    } catch (fetchError) {
+      console.error('Failed to load app data from both window globals and JSON fetch.', fetchError);
+      showDataLoadError('Unable to load player data. Verify assets/cast-data.js / assets/pool-data.js or assets/cast.json / assets/pool-data.json are deployed and reachable.');
+      return;
+    }
   }
 
   try {
@@ -405,12 +429,6 @@ function render() {
       const nameSpan = card.querySelector('.player-name');
       if (nameSpan) {
         nameSpan.textContent = player;
-        if (votedOff) {
-          const tribeBadge = document.createElement('span');
-          tribeBadge.className = 'player-tribe-badge';
-          tribeBadge.textContent = 'THE TRIBE HAS SPOKEN';
-          nameSpan.appendChild(tribeBadge);
-        }
         // Add expandable bio inside card
         const playerKey = makePlayerKey(player);
         const bio = playerBios[playerKey];

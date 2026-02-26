@@ -445,7 +445,7 @@ main {
 
 .player-card.voted-off .player-name {
   text-decoration: line-through;
-  color: #888;
+  color: #e6e6e6;
 }
 
 .player-tribe-badge {

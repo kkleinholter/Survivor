@@ -78,7 +78,7 @@
     "kyle fraser": true,
     "mike white": false,
     "ozzy lusth": false,
-    "q burdette": true,
+    "q burdette": false,
     "rick devens": false,
     "rizo velovic": false,
     "savannah louie": false,
